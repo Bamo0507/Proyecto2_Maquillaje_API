@@ -28,7 +28,7 @@ app.use('/api/user/skin-types', userSkinTypesRoutes);
 app.use('/api/user/concerns', userConcernsRoutes);
 app.use('/api/user/routines', userRoutinesRoutes);
 app.use('/api/user/reviews', userReviewsRoutes);
-app.use('/api/user/favorites', userFavoritesRoutes);
+app.use('/api/users', userFavoritesRoutes);
 app.use('/api/recommendations/skin-type', recBySkinTypeRoutes);
 app.use('/api/recommendations/skin-concern', recByConcernRoutes);
 app.use('/api/recommendations', recSimilarProductsRoutes);
