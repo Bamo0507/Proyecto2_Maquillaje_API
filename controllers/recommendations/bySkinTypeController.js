@@ -1,4 +1,5 @@
 const { driver } = require('../../db/connection');
+const { toNativeNumber } = require('../../utils/neo4j');
 
 const getRecommendationsBySkinType = async (req, res) => {
   const { username } = req.params;
@@ -41,7 +42,7 @@ const getRecommendationsBySkinType = async (req, res) => {
     const recommendations = result.records.map((record) => ({
       skinType: record.get('skinType'),
       product: {
-        productId: record.get('productId')?.toNumber(),
+        productId: toNativeNumber(record.get('productId')),
         name: record.get('name'),
         description: record.get('description'),
         price: record.get('price'),
