@@ -135,4 +135,77 @@ const deleteUserFavorite = async (req, res) => {
   }
 };
 
-module.exports = { getUserFavorites, deleteUserFavorite };
+const deleteUserFavoritesBulk = async (req, res) => {
+  const { userId } = req.params;
+  const { productIds } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({
+      message: 'userId es requerido'
+    });
+  }
+
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return res.status(400).json({
+      message: 'productIds debe ser una lista con al menos un producto'
+    });
+  }
+
+  const parsedProductIds = productIds.map(Number);
+
+  if (!parsedProductIds.every(Number.isInteger)) {
+    return res.status(400).json({
+      message: 'Todos los productIds deben ser numeros enteros'
+    });
+  }
+
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {username: $userId})-[f:FAVORITED]->(p:Product)
+      WHERE p.productId IN $productIds
+      WITH
+        collect(f) AS favoriteRelations,
+        collect({
+          productId: p.productId,
+          productName: p.name
+        }) AS favorites
+      FOREACH (favorite IN favoriteRelations | DELETE favorite)
+      RETURN favorites
+      `,
+      {
+        userId,
+        productIds: parsedProductIds
+      }
+    );
+
+    const favorites = result.records[0]?.get('favorites') || [];
+    const deletedFavorites = favorites.map((favorite) => ({
+      productId: toNativeNumber(favorite.productId),
+      productName: favorite.productName
+    }));
+
+    return res.status(200).json({
+      message: 'Favoritos eliminados correctamente',
+      userId,
+      requested: parsedProductIds.length,
+      deleted: deletedFavorites.length,
+      favorites: deletedFavorites
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Error al eliminar favoritos en bulk',
+      error: error.message
+    });
+  } finally {
+    await session.close();
+  }
+};
+
+module.exports = {
+  getUserFavorites,
+  deleteUserFavorite,
+  deleteUserFavoritesBulk
+};
