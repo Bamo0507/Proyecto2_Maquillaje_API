@@ -1,8 +1,10 @@
 const router = require('express').Router();
 const {
-  getRoutineRecommendations
+  getRoutineRecommendations,
+  getTopRankedProducts
 } = require('../../controllers/recommendations/similarProductsController');
 
-router.get('/:username', getRoutineRecommendations);
+router.get('/top-ranked', getTopRankedProducts);
+router.get('/routine/:username', getRoutineRecommendations);
 
 module.exports = router;

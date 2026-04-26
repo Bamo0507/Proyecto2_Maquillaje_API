@@ -87,4 +87,59 @@ const getRoutineRecommendations = async (req, res) => {
   }
 };
 
-module.exports = { getRoutineRecommendations };
+const getTopRankedProducts = async (req, res) => {
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `
+      MATCH (p:Product)
+      WHERE p.pageRankScore IS NOT NULL
+      RETURN
+        p.productId AS productId,
+        p.name AS name,
+        p.description AS description,
+        p.price AS price,
+        p.size AS size,
+        p.rating AS rating,
+        p.isVegan AS isVegan,
+        p.isCrueltyFree AS isCrueltyFree,
+        p.tags AS tags,
+        p.finish AS finish,
+        p.shade AS shade,
+        p.pageRankScore AS pageRankScore
+      ORDER BY p.pageRankScore DESC
+      LIMIT 25
+      `
+    );
+
+    const products = result.records.map((record) => ({
+      productId: toNativeNumber(record.get('productId')),
+      name: record.get('name'),
+      description: record.get('description'),
+      price: record.get('price'),
+      size: record.get('size'),
+      rating: record.get('rating'),
+      isVegan: record.get('isVegan'),
+      isCrueltyFree: record.get('isCrueltyFree'),
+      tags: record.get('tags'),
+      finish: record.get('finish'),
+      shade: record.get('shade'),
+      pageRankScore: record.get('pageRankScore')
+    }));
+
+    return res.status(200).json({
+      total: products.length,
+      products
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Error al obtener productos top ranked',
+      error: error.message
+    });
+  } finally {
+    await session.close();
+  }
+};
+
+module.exports = { getRoutineRecommendations, getTopRankedProducts };
