@@ -3,10 +3,8 @@ const express = require('express');
 const { connectDB } = require('./db/connection');
 
 const authRoutes = require('./routes/auth/authRoutes');
-const adminProductsRoutes = require('./routes/admin/productsRoutes');
-const adminBrandsRoutes = require('./routes/admin/brandsRoutes');
 const adminUsersRoutes = require('./routes/admin/usersRoutes');
-const adminRoutinesRoutes = require('./routes/admin/routinesRoutes');
+const productsRoutes = require('./routes/productsRoutes');
 const userProfileRoutes = require('./routes/user/profileRoutes');
 const userSkinTypesRoutes = require('./routes/user/skinTypesRoutes');
 const userConcernsRoutes = require('./routes/user/concernsRoutes');
@@ -21,10 +19,8 @@ const app = express();
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
-app.use('/api/admin/products', adminProductsRoutes);
-app.use('/api/admin/brands', adminBrandsRoutes);
 app.use('/api/admin/users', adminUsersRoutes);
-app.use('/api/admin/routines', adminRoutinesRoutes);
+app.use('/api/products', productsRoutes);
 app.use('/api/user/profile', userProfileRoutes);
 app.use('/api/user/skin-types', userSkinTypesRoutes);
 app.use('/api/user/concerns', userConcernsRoutes);
