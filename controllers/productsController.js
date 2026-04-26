@@ -1,6 +1,58 @@
 const { driver } = require('../db/connection');
 const { toNativeNumber } = require('../utils/neo4j');
 
+const getProducts = async (req, res) => {
+  const { search, category } = req.query;
+  const normalizedSearch = search?.trim() || null;
+  const normalizedCategory = category?.trim() || null;
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `
+      MATCH (p:Product)
+      OPTIONAL MATCH (p)-[:BELONGS_TO]->(b:Brand)
+      OPTIONAL MATCH (p)-[:HAS_CATEGORY]->(c:Category)
+      WITH p, b, collect(DISTINCT c.name) AS categories
+      WHERE ($search IS NULL OR toLower(p.name) CONTAINS toLower($search))
+        AND ($category IS NULL OR $category IN categories)
+      RETURN
+        p.productId AS productId,
+        p.name AS name,
+        p.price AS price,
+        b.name AS brand,
+        categories AS categories
+      ORDER BY p.name
+      LIMIT 20
+      `,
+      {
+        search: normalizedSearch,
+        category: normalizedCategory
+      }
+    );
+
+    const products = result.records.map((record) => ({
+      productId: toNativeNumber(record.get('productId')),
+      name: record.get('name'),
+      price: record.get('price'),
+      brand: record.get('brand'),
+      categories: record.get('categories')
+    }));
+
+    return res.status(200).json({
+      total: products.length,
+      products
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Error al obtener productos',
+      error: error.message
+    });
+  } finally {
+    await session.close();
+  }
+};
+
 const getProductById = async (req, res) => {
   const productId = Number(req.params.id);
 
@@ -321,6 +373,7 @@ const createProductReview = async (req, res) => {
 };
 
 module.exports = {
+  getProducts,
   getProductById,
   getProductReviews,
   getSimilarProducts,
