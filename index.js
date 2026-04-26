@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const { connectDB } = require('./db/connection');
 
 const authRoutes = require('./routes/auth/authRoutes');
@@ -17,6 +18,16 @@ const recByConcernRoutes = require('./routes/recommendations/byConcernRoutes');
 const recSimilarProductsRoutes = require('./routes/recommendations/similarProductsRoutes');
 
 const app = express();
+
+const localhostCors = (origin, callback) => {
+  if (!origin || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+    return callback(null, true);
+  }
+
+  return callback(new Error('Origen no permitido por CORS'));
+};
+
+app.use(cors({ origin: localhostCors }));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);

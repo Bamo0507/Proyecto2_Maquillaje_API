@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/Bamo0507/Proyecto2_Maquillaje_API#readme",
   "dependencies": {
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "neo4j-driver": "^6.0.1"
