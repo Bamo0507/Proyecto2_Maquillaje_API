@@ -31,7 +31,7 @@ app.use('/api/user/reviews', userReviewsRoutes);
 app.use('/api/user/favorites', userFavoritesRoutes);
 app.use('/api/recommendations/skin-type', recBySkinTypeRoutes);
 app.use('/api/recommendations/skin-concern', recByConcernRoutes);
-app.use('/api/recommendations/routine', recSimilarProductsRoutes);
+app.use('/api/recommendations', recSimilarProductsRoutes);
 
 const PORT = process.env.PORT || 3000;
 
