@@ -190,6 +190,67 @@ const getProductById = async (req, res) => {
   }
 };
 
+const getProductsByBudget = async (req, res) => {
+  const { username } = req.params;
+
+  if (!username) {
+    return res.status(400).json({
+      message: 'username es requerido'
+    });
+  }
+
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {username: $username})
+      WITH coalesce(u.monthlyBudget, 200) AS budget
+      MATCH (p:Product)
+      WHERE p.price <= budget
+      OPTIONAL MATCH (p)-[:BELONGS_TO]->(b:Brand)
+      RETURN
+        budget AS budget,
+        p.productId AS productId,
+        p.name AS name,
+        p.price AS price,
+        p.rating AS rating,
+        p.finish AS finish,
+        p.shade AS shade,
+        b.name AS brand
+      ORDER BY rand()
+      LIMIT 20
+      `,
+      { username }
+    );
+
+    const budget = result.records[0]?.get('budget') ?? null;
+    const products = result.records.map((record) => ({
+      productId: toNativeNumber(record.get('productId')),
+      name: record.get('name'),
+      price: record.get('price'),
+      rating: record.get('rating'),
+      finish: record.get('finish'),
+      shade: record.get('shade'),
+      brand: record.get('brand')
+    }));
+
+    return res.status(200).json({
+      username,
+      budget,
+      total: products.length,
+      products
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Error al obtener productos por presupuesto',
+      error: error.message
+    });
+  } finally {
+    await session.close();
+  }
+};
+
 const getProductReviews = async (req, res) => {
   const productId = Number(req.params.id);
 
@@ -375,6 +436,7 @@ const createProductReview = async (req, res) => {
 module.exports = {
   getProducts,
   getProductById,
+  getProductsByBudget,
   getProductReviews,
   getSimilarProducts,
   createProductReview
