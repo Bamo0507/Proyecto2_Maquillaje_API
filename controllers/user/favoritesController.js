@@ -75,4 +75,64 @@ const getUserFavorites = async (req, res) => {
   }
 };
 
-module.exports = { getUserFavorites };
+const deleteUserFavorite = async (req, res) => {
+  const { userId, productId } = req.params;
+  const parsedProductId = Number(productId);
+
+  if (!userId || !productId) {
+    return res.status(400).json({
+      message: 'userId y productId son requeridos'
+    });
+  }
+
+  if (!Number.isInteger(parsedProductId)) {
+    return res.status(400).json({
+      message: 'productId debe ser un numero entero'
+    });
+  }
+
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {username: $userId})-[f:FAVORITED]->(p:Product {productId: $productId})
+      DELETE f
+      RETURN
+        u.username AS username,
+        p.productId AS productId,
+        p.name AS productName
+      `,
+      {
+        userId,
+        productId: parsedProductId
+      }
+    );
+
+    if (result.records.length === 0) {
+      return res.status(404).json({
+        message: 'Favorito no encontrado'
+      });
+    }
+
+    const record = result.records[0];
+
+    return res.status(200).json({
+      message: 'Favorito eliminado correctamente',
+      userId: record.get('username'),
+      product: {
+        productId: toNativeNumber(record.get('productId')),
+        name: record.get('productName')
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Error al eliminar favorito del usuario',
+      error: error.message
+    });
+  } finally {
+    await session.close();
+  }
+};
+
+module.exports = { getUserFavorites, deleteUserFavorite };
