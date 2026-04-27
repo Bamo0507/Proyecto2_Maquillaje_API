@@ -75,6 +75,88 @@ const getUserFavorites = async (req, res) => {
   }
 };
 
+const addUserFavorite = async (req, res) => {
+  const { userId } = req.params;
+  const { productId, notes, isPurchased = false } = req.body;
+  const parsedProductId = Number(productId);
+
+  if (!userId) {
+    return res.status(400).json({
+      message: 'userId es requerido'
+    });
+  }
+
+  if (!Number.isInteger(parsedProductId)) {
+    return res.status(400).json({
+      message: 'productId debe ser un numero entero'
+    });
+  }
+
+  if (typeof isPurchased !== 'boolean') {
+    return res.status(400).json({
+      message: 'isPurchased debe ser booleano'
+    });
+  }
+
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {username: $userId})
+      MATCH (p:Product {productId: $productId})
+      MERGE (u)-[f:FAVORITED]->(p)
+      ON CREATE SET
+        f.addedAt = date(),
+        f.notes = $notes,
+        f.isPurchased = $isPurchased
+      RETURN
+        u.username AS username,
+        p.productId AS productId,
+        p.name AS productName,
+        f.addedAt AS addedAt,
+        f.notes AS notes,
+        f.isPurchased AS isPurchased
+      `,
+      {
+        userId,
+        productId: parsedProductId,
+        notes: notes || null,
+        isPurchased
+      }
+    );
+
+    if (result.records.length === 0) {
+      return res.status(404).json({
+        message: 'Usuario o producto no encontrado'
+      });
+    }
+
+    const record = result.records[0];
+
+    return res.status(200).json({
+      message: 'Favorito registrado correctamente',
+      userId: record.get('username'),
+      product: {
+        productId: toNativeNumber(record.get('productId')),
+        name: record.get('productName')
+      },
+      favorite: {
+        addedAt: record.get('addedAt')?.toString(),
+        notes: record.get('notes'),
+        isPurchased: record.get('isPurchased')
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Error al agregar favorito',
+      error: error.message
+    });
+  } finally {
+    await session.close();
+  }
+};
+
 const deleteUserFavorite = async (req, res) => {
   const { userId, productId } = req.params;
   const parsedProductId = Number(productId);
@@ -206,6 +288,7 @@ const deleteUserFavoritesBulk = async (req, res) => {
 
 module.exports = {
   getUserFavorites,
+  addUserFavorite,
   deleteUserFavorite,
   deleteUserFavoritesBulk
 };

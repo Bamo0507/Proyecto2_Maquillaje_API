@@ -55,6 +55,7 @@ const getProducts = async (req, res) => {
 
 const getProductById = async (req, res) => {
   const productId = Number(req.params.id);
+  const username = req.query.username?.trim() || null;
 
   if (!Number.isInteger(productId)) {
     return res.status(400).json({
@@ -73,9 +74,11 @@ const getProductById = async (req, res) => {
       OPTIONAL MATCH (p)-[contains:CONTAINS]->(i:Ingredient)
       OPTIONAL MATCH (p)-[suitable:SUITABLE_FOR]->(st:SkinType)
       OPTIONAL MATCH (p)-[targets:TARGETS]->(sc:SkinConcern)
+      OPTIONAL MATCH (:User {username: $username})-[favorite:FAVORITED]->(p)
       RETURN
         p AS product,
         b AS brand,
+        favorite AS favorite,
         collect(DISTINCT c) AS categories,
         collect(DISTINCT {
           ingredient: i,
@@ -97,7 +100,7 @@ const getProductById = async (req, res) => {
           resultsTimeWeeks: targets.resultsTimeWeeks
         }) AS skinConcerns
       `,
-      { productId }
+      { productId, username }
     );
 
     if (result.records.length === 0) {
@@ -133,6 +136,12 @@ const getProductById = async (req, res) => {
         isLuxury: brand.isLuxury,
         certifications: brand.certifications,
         description: brand.description
+      },
+      favorite: {
+        isFavorite: Boolean(record.get('favorite')),
+        addedAt: record.get('favorite')?.properties.addedAt?.toString(),
+        notes: record.get('favorite')?.properties.notes,
+        isPurchased: record.get('favorite')?.properties.isPurchased
       },
       categories: record.get('categories')
         .filter(Boolean)
