@@ -84,8 +84,10 @@ const getTopRankedProducts = async (req, res) => {
     const result = await session.run(
       `
       MATCH (p:Product)
+      MATCH (p)-[bt:BELONGS_TO]->(b:Brand)
       WHERE p.pageRankScore IS NOT NULL
       RETURN
+        b.name AS brandName,
         p.productId AS productId,
         p.name AS name,
         p.description AS description,
@@ -106,6 +108,7 @@ const getTopRankedProducts = async (req, res) => {
     const products = result.records.map((record) => ({
       productId: toNativeNumber(record.get('productId')),
       name: record.get('name'),
+      brandName: record.get('brandName'),
       description: record.get('description'),
       price: record.get('price'),
       size: record.get('size'),
