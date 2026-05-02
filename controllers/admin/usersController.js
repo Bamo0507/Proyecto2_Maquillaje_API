@@ -94,6 +94,8 @@ const createUser = async (req, res) => {
       WHERE existing.username = $username OR existing.email = $email
       WITH count(existing) AS existingCount
       WHERE existingCount = 0
+      MATCH (defaultSkinType:SkinType {name: "Normal"})
+      MATCH (defaultConcern:SkinConcern {name: "Deshidratación"})
       CREATE (u:User {
         username: $username,
         email: $email,
@@ -106,6 +108,17 @@ const createUser = async (req, res) => {
         u.preferences = $preferences,
         u.monthlyBudget = $monthlyBudget
       FOREACH (_ IN CASE WHEN $isAdmin THEN [1] ELSE [] END | SET u:Admin)
+      CREATE (u)-[:HAS_SKIN_TYPE {
+        area: "rostro",
+        confirmedAt: date(),
+        selfDiagnosed: true,
+        sensitivity: "low"
+      }]->(defaultSkinType)
+      CREATE (u)-[:HAS_CONCERN {
+        isPrimary: true,
+        severity: 2,
+        since: date()
+      }]->(defaultConcern)
       RETURN
         u.username AS username,
         u.email AS email,
