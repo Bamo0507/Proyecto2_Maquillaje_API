@@ -274,6 +274,83 @@ const deleteReviewComment = async (req, res) => {
   }
 };
 
+const updateReviewRatingBulk = async (req, res) => {
+  const { username } = req.params;
+  const { productIds, rating } = req.body;
+  const parsedRating = Number(rating);
+
+  if (!username) {
+    return res.status(400).json({
+      message: 'username es requerido'
+    });
+  }
+
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return res.status(400).json({
+      message: 'productIds debe ser una lista con al menos un producto'
+    });
+  }
+
+  const parsedProductIds = productIds.map(Number);
+
+  if (!parsedProductIds.every(Number.isInteger)) {
+    return res.status(400).json({
+      message: 'Todos los productIds deben ser numeros enteros'
+    });
+  }
+
+  if (!Number.isFinite(parsedRating)) {
+    return res.status(400).json({
+      message: 'rating debe ser numerico'
+    });
+  }
+
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {username: $username})-[r:REVIEWED]->(p:Product)
+      WHERE p.productId IN $productIds
+      SET r.rating = $rating
+      RETURN
+        r.rating AS rating,
+        p.productId AS productId,
+        p.name AS productName
+      ORDER BY productId
+      `,
+      {
+        username,
+        productIds: parsedProductIds,
+        rating: parsedRating
+      }
+    );
+
+    const updatedReviews = result.records.map((record) => ({
+      rating: record.get('rating'),
+      product: {
+        productId: toNativeNumber(record.get('productId')),
+        name: record.get('productName')
+      }
+    }));
+
+    return res.status(200).json({
+      message: 'Ratings actualizados correctamente',
+      username,
+      requested: parsedProductIds.length,
+      updated: updatedReviews.length,
+      reviews: updatedReviews
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Error al actualizar ratings en bulk',
+      error: error.message
+    });
+  } finally {
+    await session.close();
+  }
+};
+
 const deleteReviewCommentsBulk = async (req, res) => {
   const { username } = req.params;
   const { productIds } = req.body;
@@ -348,6 +425,7 @@ module.exports = {
   getUserReviews,
   addReviewComment,
   addReviewCommentBulk,
+  updateReviewRatingBulk,
   deleteReviewComment,
   deleteReviewCommentsBulk
 };
